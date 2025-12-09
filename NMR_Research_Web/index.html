@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>核磁気共鳴（NMR）シミュレーション</title>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* スタイル設定 */
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+            color: #0056b3;
+        }
+        h2 {
+            border-left: 5px solid #0056b3;
+            padding-left: 10px;
+            margin-top: 50px;
+            background-color: #eef;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+        p {
+            margin-bottom: 1.5em;
+            text-align: justify;
+        }
+        /* 画像表示用のクラス */
+        .figure {
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .figure img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .caption {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        /* シミュレータ埋め込み用の枠 */
+        .sim-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            background: #000;
+            padding: 10px 0;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        iframe {
+            border: none;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>核磁気共鳴（NMR）と緩和現象</h1>
+        <p style="text-align: right; color: #666;">電子物性研究室 卒業研究</p>
+    </header>
+
+    <section>
+        <h2>1. NMRとは？</h2>
+        <p>
+            <strong>NMR (Nuclear Magnetic Resonance：核磁気共鳴)<\strong> とは、原子核が特定の周波数の電磁波と共鳴して、エネルギーを吸収する現象です。
+            この現象の解析によって、試料を破壊することなく、物質の分子構造や化学状態を詳細に知ることができます。
+        </p>
+    </section>
+
+    <section>
+        <h2>2. なぜNMRが起こるのか？<br><span style="font-size: 0.8em;">〜ラーモア歳差運動とゼーマン分裂〜</span></h2>
+        <p>
+            原子核はそれぞれ<strong>核磁気モーメント</strong> \( \boldsymbol{\mu} \) を持っており、それによって小さな磁石のように振る舞います。<br>
+            外部磁場 \( \boldsymbol{B_0} \) を原子核に対して印加すると、磁気モーメント \( \boldsymbol{\mu} \) は \( \boldsymbol{B_0} \) を軸にして角周波数
+            $$ f_0 = \frac{\omega_0}{2\pi} = \gamma B_0 $$
+            で歳差運動します。これを<strong>ラーモア歳差運動</strong>といい、\( \omega_0 \) はラーモア周波数と呼ばれています。
+            <div class="figure">
+            <img src="larmor.png" alt="ラーモア歳差運動の図">
+            <div class="caption">Figure: ラーモア歳差運動</div>
+        </div>
+        </p>
+        <p>
+            また、外部磁場の影響で核スピンの向きは磁場の向きと順並行、または逆並行に揃い、磁場と同じ向きに巨視的な磁化
+            $$ \boldsymbol{M} = \sum \boldsymbol{\mu_i} $$
+            が現れます。\( \boldsymbol{M} \) が磁場と同じ向きである理由は、逆並行に比べて順並行の状態の方がエネルギー的に安定であるため、数が少し多くなるからです。
+        </p>
+        
+        <p>
+            そして、\( 2I+1 \) 個（\( I \)：核スピン量子数）のエネルギー準位に分裂します。これを<strong>ゼーマン分裂</strong>といいます。例えばスピン \( \frac{1}{2} \) の場合であれば、Figureのように分裂し、そのエネルギー差は
+            $$ \Delta E = \gamma \hbar B_0 $$
+            で表されます。ここで、\( \gamma \) は核種ごとの磁気回転比です。<br>
+            そしてこの差に対応する周波数
+            $$ \omega_0 = \gamma B_0 $$
+            の電磁波を照射すると、原子核はエネルギーを吸収して共鳴します。<br>
+            これが核磁気共鳴現象です。
+
+            <div class="figure">
+            <img src="zeeman.png" alt="ゼーマン分裂のエネルギー準位図">
+            <div class="caption">Figure: エネルギー準位の分裂（ゼーマン分裂）</div>
+        </div>
+        </p>
+    </section>
+
+   <section>
+        <h2>3. FID（自由誘導減衰）</h2>
+        <p>
+            上述したように、磁場中の核スピンはラーモア歳差運動をしており、個々の核スピンの磁気モーメントの総和をとると、磁場と同じ方向を向いた磁化があると考えることができます。ここに、ラーモア周波数 \( \omega_0 \) と同じ周波数を持った電磁波を横から照射すると、磁化 \( \boldsymbol{M} \) は \( \omega_0 \) で回転しながら横に倒れていきます。
+        </p>
+
+        <div class="figure">
+            <img src="fid_sequence.png" alt="FIDの一連の流れ">
+            <div class="caption">Figure: 90°パルスによる磁化の回転とFID</div>
+        </div>
+
+        <p>
+            \( \omega_0 \) で回転する座標系で見れば、Figureのように磁化 \( \boldsymbol{M} \) が90°倒れます。このように磁化 \( \boldsymbol{M} \) を90°倒す電磁波のことを90°パルスといいます。
+        </p>
+        <p>
+            その後、電磁波を止めると個々の核スピンは \( xy \) 平面にばらけていきながら回転を続け、\( z \) 軸方向に起き上がっていきます。ここで、信号が消失する原因となる「緩和現象」には2つの種類があります。
+        </p>
+        
+        <h3>① 縦緩和（スピン-格子緩和：\( T_1 \)）</h3>
+        <p>
+            倒されたスピンがエネルギーを放出し、熱平衡状態（\( z \) 軸方向）に戻っていく過程です。スピンが周囲の環境（格子）とエネルギーをやり取りすることで起こります。
+        </p>
+
+        <h3>② 横緩和（スピン-スピン緩和：\( T_2 \)）</h3>
+        <p>
+            \( xy \) 平面内で揃っていたスピンの位相（回転のタイミング）がバラバラになり、信号が打ち消し合って消える現象です。これには主に2つの要因があります。
+        </p>
+        <ul>
+            <li><strong>磁場の不均一性（\( T_2^* \) に寄与）</strong>:<br>
+                装置の磁場のムラなどにより、場所によって回転周波数が異なるために生じる「見かけの減衰」です。これはスピンエコー法で回復可能です。</li>
+            <li><strong>双極子相互作用（真の \( T_2 \) に寄与）</strong>:<br>
+                隣り合う原子核の磁石（スピン）同士がお互いに磁場を及ぼし合う（磁気双極子相互作用 [cite: 121-123]）ことで生じます。隣のスピンの影響で局所的な磁場が揺らぐため、それぞれのスピンの回転速度がランダムに変化し、位相が不可逆的に乱れます。これは物質固有の現象であり、エコー法でも回復できません。</li>
+        </ul>
+
+        <p>
+            この過程では、磁化 \( \boldsymbol{M} \) が回転することによって時間変化する磁束を生じ、誘導起電力が生じます。（cf. ファラデーの電磁誘導の法則）また、横緩和によって \( M_{y'} \) は徐々に減少していくため、時間と共に減衰していく波形の信号が得られます。この減衰信号を<strong>FID（Free Induction Decay：自由誘導減衰）</strong>といいます。FIDの波形を解析（フーリエ変換 [cite: 251-253]）することによって、物質のスペクトル情報を得ることができます。
+        </p>
+    </section>
+
+    <section>
+        <h2>4. SE（スピンエコー）</h2>
+        <p>
+            90°パルスの \( \tau \) 秒後に再び \( \omega_0 = \gamma B_0 \) の周波数を持った電磁波を2倍の時間かけて照射すると（180°パルス）、個々の磁気モーメント \( \boldsymbol{\mu_i} \) は180°回転します。
+        </p>
+
+        <div class="figure">
+            <img src="se_animation.gif" alt="スピンエコーのアニメーション">
+            <div class="caption">Figure: スピンエコー（SE）による磁化の再結集</div>
+        </div>
+
+        <p>
+            すると \( 2\tau \) 秒後には0〜 \( \tau \) 秒の間に蓄積された位相差がちょうど相殺され、\( -y' \) 方向に大きな磁化が現れます。この過程で再び信号を観測することができ、この信号をSE（Spin Echo：スピンエコー）といいます。これにより、磁場のムラによる影響を取り除き、物質本来の性質を測ることができます。
+        </p>
+    </section>
+
+    <section>
+        <h2>5. シミュレータ</h2>
+        <p>
+            以下のシミュレーターでパラメータを操作し、FIDとSEの波形変化を確認できます。<br>
+            グラフの<strong>緑色の線</strong>は印加したパルス、<strong>白い線</strong>は観測される信号（電圧）を表しています。
+        </p>
+        
+        <div class="sim-container">
+            <iframe 
+                src="./simulator/sim.html" 
+                width="760" 
+                height="460" 
+                scrolling="no">
+            </iframe>
+        </div>
+
+        <h3>パラメータ操作と物理現象の観察</h3>
+        <dl>
+            <dt><strong>omega_1 (回転磁場の周波数)</strong></dt>
+            <dd>
+                照射する電磁波の周波数です。
+                <ul>
+                    <li><strong>操作</strong>: スライダーを動かして値を \( 10.0 \) から大きくズラす。</li>
+                    <li><strong>物理的変化</strong>: 外部磁場による原子核の回転速度と、パルスの回転速度にズレ（オフセット）が生じます。</li>
+                    <li><strong>波形の変化</strong>: 白い信号線が大きく波打つ<strong>「うねり（ビート）」</strong>が観察できます。周波数が離れすぎると、共鳴効率が落ちて信号全体が小さくなります。</li>
+                </ul>
+            </dd>
+            <br>
+            <dt><strong>t_pulse1 (90°パルス幅)</strong></dt>
+            <dd>
+                最初のパルスの長さです。
+                <ul>
+                    <li><strong>操作</strong>: \( 4.5 \) \(\mu s\) から値を変更する。</li>
+                    <li><strong>物理的変化</strong>: 磁化 \( \boldsymbol{M} \) が倒れる角度が変わります（90°で最大、0°や180°では横成分なし）。</li>
+                    <li><strong>波形の変化</strong>: FID（左側の波形）とSE（右側の波形）の<strong>高さ（強度）</strong>が変化します。\( 4.5 \) のとき最大になります。</li>
+                </ul>
+            </dd>
+            <br>
+            <dt><strong>t_pulse2 (180°パルス幅)</strong></dt>
+            <dd>
+                2回目の反転パルスの長さです。
+                <ul>
+                    <li><strong>操作</strong>: \( 9.0 \) \(\mu s\) から値を変更する。</li>
+                    <li><strong>物理的変化</strong>: バラけたスピンを反転させる「回れ右」の精度が変わります。</li>
+                    <li><strong>波形の変化</strong>: <strong>SE（右側の山）の高さだけ</strong>が変化します。失敗するとエコーが小さくなり、成功（\( 9.0 \)）すると最大になります。FIDには影響しません。</li>
+                </ul>
+            </dd>
+            <br>
+            <dt><strong>T2* (Inhomo: 磁場の不均一性)</strong></dt>
+            <dd>
+                磁場のムラによる「見かけの減衰」の速さです。
+                <ul>
+                    <li><strong>操作</strong>: 値を小さく（\( 2.0 \) など）する。</li>
+                    <li><strong>物理的変化</strong>: スピンごとの回転速度のバラつきが大きくなり、すぐに位相がズレてしまいます。</li>
+                    <li><strong>波形の変化</strong>: FIDが急激に減衰して消えるようになります。また、SEのエコーの山が<strong>鋭く（幅が狭く）</strong>なります。</li>
+                </ul>
+            </dd>
+            <br>
+            <dt><strong>T2 (True: 真の横緩和)</strong></dt>
+            <dd>
+                物質固有の不可逆な信号減衰です。
+                <ul>
+                    <li><strong>操作</strong>: 値を小さく（\( 50.0 \) など）する。</li>
+                    <li><strong>物理的変化</strong>: スピン同士の相互作用によりエネルギーが失われ、信号全体が弱まります。</li>
+                    <li><strong>波形の変化</strong>: 波形全体の高さ（特に後半のSE部分）が低くなります。エコー法を使っても、この減衰分だけは回復できません。</li>
+                </ul>
+            </dd>
+        </dl>
+    </section>
+<section>
+        <h2>6. NMRの応用：MRIと物質解析</h2>
+        <p>
+            NMRの技術は、医療や化学の分野で広く応用されています。最も有名な例が<strong>MRI（磁気共鳴画像法）</strong>です。
+        </p>
+        <p>
+            人間の体は多くの水分（水素原子核）を含んでいます。MRIは、体内にある水素原子核の \( T_1 \) や \( T_2 \) などの緩和時間の違いを画像化することで、がん組織や脳の構造などを映し出しています。
+            今回シミュレーターで体験した「信号が消える速さ（緩和時間）」の違いが、そのまま診断画像コントラストの元になっているのです。
+        </p>
+        <p>
+            また、化学や薬学の分野では、新しい薬の開発や材料の分析において、分子の構造を決定するためにNMRが不可欠なツールとして使われています。
+        </p>
+    </section>
+
+<section style="background-color: #f0f0f0; border-radius: 8px; padding: 20px; margin-top: 40px;">
+        <h3 style="margin-top: 0; color: #444;">コラム：シミュレーションの物理的背景</h3>
+        
+        <h4>1. 「周波数のズレ」＝「見かけの磁場」？</h4>
+        <p>
+            シミュレーターで登場する \( \Delta B_z \)（縦方向の残留磁場）は、実際に新しい磁石を置いて発生させたものではありません。これは<strong>「回転座標系という視点」によって生じる、見かけ上の磁場</strong>です。
+        </p>
+        <p>
+            例えば、時速100kmで走る車を、時速95kmの車から見ると、相手は「時速5km」でゆっくり動いているように見えます。<br>
+            これと同じで、原子核の回転（\( \omega_0 \)）と、パルスの回転（\( \omega_1 \)）にズレ（オフセット）がある場合、回転座標系に乗っている私たちからは、そのズレの分だけ<strong>「原子核がゆっくり回転している」</strong>ように見えます。<br>
+            物理学では、この「ゆっくりした回転」を引き起こす原因として、仮想的な磁場 \( \Delta B_z \) を定義します。
+            $$ \Delta B_z = \frac{\omega_0 - \omega_1}{\gamma} $$
+        </p>
+
+        <h4>2. ハードパルス近似とは？</h4>
+        <p>
+            パルス照射中、スピンは「横方向のパルス磁場 \( B_1 \)」と、上記の「縦方向のズレ磁場 \( \Delta B_z \)」の両方を感じて、その合成ベクトル（有効磁場）の周りを回転します。<br>
+            しかし、通常の実験では非常に強力なパルスを一瞬だけ照射するため、横方向の力が圧倒的に強くなります（\( B_1 \gg \Delta B_z \)）。そのため、本シミュレーターでは縦方向のズレを無視し、スピンはきれいに横軸周りに回転するとみなしています。
+        </p>
+
+        <h4>3. なぜパルス間隔中の \( T_1 \) 緩和を無視できる？</h4>
+        <p>
+            本シミュレーターでは、90°パルスから180°パルスの間（時間 \( \tau \)）における、縦緩和（\( z \) 軸方向への回復）を計算に入れていません。これには2つの正当な理由があります。
+        </p>
+        <ul>
+            <li><strong>時間のスケールが違う</strong>: 通常、縦緩和時間 \( T_1 \)（秒オーダー）は、パルス間隔 \( \tau \)（ミリ秒オーダー）に比べて非常に長いため、一回の実験時間内では回復はほとんど進みません（\( \tau \ll T_1 \)）。</li>
+            <li><strong>信号への寄与が小さい</strong>: NMR信号として観測されるのは \( xy \) 平面上の磁化だけです。パルス間に \( z \) 成分がわずかに回復しても、それは「信号にならない成分」が増えるだけであり、エコー信号の強度には直接影響しません。</li>
+        </ul>
+        <p>
+            以上の理由から、単発のパルス実験（シングルショット）における信号強度計算では、パルス間隔中の \( T_1 \) 緩和の影響は無視できると近似しています。
+        </p>
+    </section>
+
+</body>
+</html>
